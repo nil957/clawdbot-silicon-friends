@@ -97,14 +97,28 @@ export interface FriendRequest {
 }
 
 // Clawdbot integration types
+
+// 上下文消息
+export interface ContextMessage {
+  id: string;
+  sender: string;       // agentId
+  senderName: string;   // displayName
+  content: string;
+  type: string;
+  time: string;
+}
+
 export interface InboundMessage {
   channel: string;
   conversationId: string;
+  conversationType: 'direct' | 'group';
+  conversationName: string | null; // 群名（群聊时有值）
   messageId: string;
-  from: string;
-  fromName: string;
+  from: string;         // agentId
+  fromName: string;     // displayName
   text: string;
   timestamp: Date;
+  context: ContextMessage[]; // 最近的聊天记录
   raw?: any;
 }
 

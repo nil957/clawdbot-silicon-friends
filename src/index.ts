@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import { ApiClient, Group } from './api.js';
-import { WebSocketClient } from './websocket.js';
+import { WebSocketClient, MessagePayload } from './websocket.js';
 import {
   SiliconFriendsConfig,
   User,
@@ -10,6 +10,7 @@ import {
   InboundMessage,
   OutboundMessage,
   ObserverAccount,
+  ContextMessage,
 } from './types.js';
 
 export class SiliconFriendsPlugin extends EventEmitter {
@@ -32,7 +33,6 @@ export class SiliconFriendsPlugin extends EventEmitter {
 
   async start(): Promise<{ user: User; observer?: ObserverAccount }> {
     try {
-      // Try to login first
       let user: User;
       let observer: ObserverAccount | undefined;
       
@@ -44,7 +44,6 @@ export class SiliconFriendsPlugin extends EventEmitter {
         user = result.user;
         console.log(`[silicon-friends] Logged in as ${user.displayName} (@${user.agentId})`);
       } catch (loginError) {
-        // If login fails and autoRegister is enabled (default), try to register
         const autoRegister = this.config.autoRegister !== false;
         
         if (!autoRegister) {
@@ -69,16 +68,12 @@ export class SiliconFriendsPlugin extends EventEmitter {
         console.log(`[silicon-friends] Registered as ${user.displayName} (@${user.agentId})`);
         console.log(`[silicon-friends] Observer account created: ${observer.username}`);
         
-        // Emit observer account info so AI can notify the owner
         this.emit('observer_created', observer);
       }
 
       this.currentUser = user;
-
-      // Load conversations
       await this.loadConversations();
 
-      // Setup WebSocket
       if (this.config.features?.messaging || this.config.features?.notifications) {
         await this.setupWebSocket();
       }
@@ -117,25 +112,28 @@ export class SiliconFriendsPlugin extends EventEmitter {
     try {
       await this.ws.connect(token);
 
-      // Handle incoming messages
-      this.ws.setOnMessage((message) => {
-        if (message.sender.id === this.currentUser?.id) return; // Skip own messages
+      // Handle incoming messages with context
+      this.ws.setOnMessage((payload: MessagePayload) => {
+        // Skip own messages
+        if (payload.message.sender.id === this.currentUser?.id) return;
 
         const inbound: InboundMessage = {
           channel: 'silicon-friends',
-          conversationId: message.conversationId,
-          messageId: message.id,
-          from: message.sender.agentId,
-          fromName: message.sender.displayName,
-          text: message.content,
-          timestamp: new Date(message.createdAt),
-          raw: message,
+          conversationId: payload.conversation.id,
+          conversationType: payload.conversation.type as 'direct' | 'group',
+          conversationName: payload.conversation.name,
+          messageId: payload.message.id,
+          from: payload.message.sender.agentId,
+          fromName: payload.message.sender.displayName,
+          text: payload.message.content,
+          timestamp: new Date(payload.message.createdAt),
+          context: payload.context, // 带上最近的聊天记录
+          raw: payload,
         };
 
         this.emit('inbound', inbound);
       });
 
-      // Handle friend online/offline
       this.ws.setOnFriendOnline((data) => {
         console.log(`[silicon-friends] @${data.agentId} came online`);
       });
@@ -157,14 +155,12 @@ export class SiliconFriendsPlugin extends EventEmitter {
         return;
       }
 
-      // Direct message
       if (!message.conversationId && !message.to) {
         throw new Error('Either conversationId or to must be specified');
       }
 
       let conversationId = message.conversationId;
 
-      // Create/get conversation if targeting a user
       if (!conversationId && message.to) {
         const userId = this.userIdByAgentId.get(message.to) || message.to;
         const conv = await this.api.getOrCreateConversation(userId);
@@ -175,7 +171,6 @@ export class SiliconFriendsPlugin extends EventEmitter {
         throw new Error('Could not determine conversation');
       }
 
-      // Send via WebSocket if connected, otherwise REST
       if (this.ws.isConnected()) {
         this.ws.sendMessage(conversationId, message.text);
       } else {
@@ -276,18 +271,18 @@ export class SiliconFriendsPlugin extends EventEmitter {
 
   async sendGroupMessage(groupId: string, content: string, mentions?: string[]): Promise<void> {
     if (this.ws.isConnected()) {
-      this.ws.sendMessage(groupId, content);
+      this.ws.sendMessage(groupId, content, mentions);
     } else {
       await this.api.sendMessage(groupId, content, mentions);
     }
   }
 }
 
-// Clawdbot plugin factory (if used as external plugin)
+// Clawdbot plugin factory
 export function createPlugin(config: SiliconFriendsConfig) {
   return new SiliconFriendsPlugin(config);
 }
 
 export * from './types.js';
 export { ApiClient } from './api.js';
-export { WebSocketClient } from './websocket.js';
+export { WebSocketClient, MessagePayload, ContextMessage } from './websocket.js';
