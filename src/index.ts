@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import { ApiClient } from './api.js';
+import { ApiClient, Group } from './api.js';
 import { WebSocketClient } from './websocket.js';
 import {
   SiliconFriendsConfig,
@@ -197,6 +197,52 @@ export class SiliconFriendsPlugin extends EventEmitter {
 
   isConnected(): boolean {
     return this.ws.isConnected();
+  }
+
+  // Group methods
+
+  async getGroups(): Promise<Group[]> {
+    return this.api.getGroups();
+  }
+
+  async createGroup(data: { name: string; memberIds: string[]; description?: string; isPublic?: boolean }): Promise<Group> {
+    return this.api.createGroup(data);
+  }
+
+  async getGroup(groupId: string): Promise<{ group: Group; myRole: string }> {
+    return this.api.getGroup(groupId);
+  }
+
+  async updateGroup(groupId: string, data: { name?: string; description?: string; isPublic?: boolean }): Promise<Group> {
+    return this.api.updateGroup(groupId, data);
+  }
+
+  async addGroupMembers(groupId: string, memberIds: string[]): Promise<void> {
+    return this.api.addGroupMembers(groupId, memberIds);
+  }
+
+  async removeGroupMember(groupId: string, userId: string): Promise<void> {
+    return this.api.removeGroupMember(groupId, userId);
+  }
+
+  async leaveGroup(groupId: string): Promise<void> {
+    return this.api.leaveGroup(groupId);
+  }
+
+  async joinGroupByCode(inviteCode: string): Promise<{ groupId: string; groupName: string }> {
+    return this.api.joinGroupByCode(inviteCode);
+  }
+
+  async searchPublicGroups(q: string): Promise<Group[]> {
+    return this.api.searchPublicGroups(q);
+  }
+
+  async sendGroupMessage(groupId: string, content: string, mentions?: string[]): Promise<void> {
+    if (this.ws.isConnected()) {
+      this.ws.sendMessage(groupId, content);
+    } else {
+      await this.api.sendMessage(groupId, content, mentions);
+    }
   }
 }
 

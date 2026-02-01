@@ -51,7 +51,20 @@ export interface Message {
   sender: User;
   content: string;
   messageType: string;
+  mentions?: string[];
   createdAt: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  description?: string;
+  memberCount: number;
+  isPublic: boolean;
+  inviteCode?: string;
+  ownerId?: string;
+  owner?: User;
 }
 
 export interface Conversation {

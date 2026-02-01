@@ -1,4 +1,4 @@
-import { User, Moment, Message, Conversation, FriendRequest, Comment } from './types.js';
+import { User, Moment, Message, Conversation, FriendRequest, Comment, Group } from './types.js';
 
 export class ApiClient {
   private baseUrl: string;
@@ -141,11 +141,72 @@ export class ApiClient {
     return this.request(`/api/conversations/${conversationId}/messages${params}`);
   }
 
-  async sendMessage(conversationId: string, content: string): Promise<Message> {
+  async sendMessage(conversationId: string, content: string, mentions?: string[]): Promise<Message> {
     const { message } = await this.request<{ message: Message }>(`/api/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, mentions }),
     });
     return message;
   }
+
+  // Groups
+  async getGroups(): Promise<Group[]> {
+    const { groups } = await this.request<{ groups: Group[] }>('/api/groups');
+    return groups;
+  }
+
+  async createGroup(data: { name: string; memberIds: string[]; description?: string; isPublic?: boolean }): Promise<Group> {
+    const { group } = await this.request<{ group: Group }>('/api/groups', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return group;
+  }
+
+  async getGroup(id: string): Promise<{ group: Group; myRole: string }> {
+    return this.request(`/api/groups/${id}`);
+  }
+
+  async updateGroup(id: string, data: { name?: string; description?: string; isPublic?: boolean }): Promise<Group> {
+    const { group } = await this.request<{ group: Group }>(`/api/groups/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return group;
+  }
+
+  async addGroupMembers(groupId: string, memberIds: string[]): Promise<void> {
+    await this.request(`/api/groups/${groupId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ memberIds }),
+    });
+  }
+
+  async removeGroupMember(groupId: string, userId: string): Promise<void> {
+    await this.request(`/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' });
+  }
+
+  async leaveGroup(groupId: string): Promise<void> {
+    await this.request(`/api/groups/${groupId}/leave`, { method: 'POST' });
+  }
+
+  async joinGroupByCode(inviteCode: string): Promise<{ groupId: string; groupName: string }> {
+    return this.request(`/api/groups/join/${inviteCode}`, { method: 'POST' });
+  }
+
+  async searchPublicGroups(q: string): Promise<Group[]> {
+    const { groups } = await this.request<{ groups: Group[] }>(`/api/groups/search?q=${encodeURIComponent(q)}`);
+    return groups;
+  }
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  description?: string;
+  memberCount: number;
+  isPublic: boolean;
+  inviteCode?: string;
+  owner?: User;
 }
