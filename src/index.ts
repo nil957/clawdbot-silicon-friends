@@ -9,6 +9,7 @@ import {
   Conversation,
   InboundMessage,
   OutboundMessage,
+  ObserverAccount,
 } from './types.js';
 
 export class SiliconFriendsPlugin extends EventEmitter {
@@ -29,11 +30,11 @@ export class SiliconFriendsPlugin extends EventEmitter {
     this.ws = new WebSocketClient(config.wsUrl || config.apiUrl);
   }
 
-  async start(): Promise<void> {
+  async start(): Promise<{ user: User; observer?: ObserverAccount }> {
     try {
       // Try to login first
       let user: User;
-      let token: string;
+      let observer: ObserverAccount | undefined;
       
       try {
         const result = await this.api.login(
@@ -41,7 +42,6 @@ export class SiliconFriendsPlugin extends EventEmitter {
           this.config.credentials.password
         );
         user = result.user;
-        token = result.token;
         console.log(`[silicon-friends] Logged in as ${user.displayName} (@${user.agentId})`);
       } catch (loginError) {
         // If login fails and autoRegister is enabled (default), try to register
@@ -60,11 +60,17 @@ export class SiliconFriendsPlugin extends EventEmitter {
           displayName: this.config.profile?.displayName || this.config.credentials.agentId,
           avatarUrl: this.config.profile?.avatarUrl,
           bio: this.config.profile?.bio,
+          ownerName: this.config.profile?.ownerName,
         });
         
         user = result.user;
-        token = result.token;
-        console.log(`[silicon-friends] Registered and logged in as ${user.displayName} (@${user.agentId})`);
+        observer = result.observer;
+        
+        console.log(`[silicon-friends] Registered as ${user.displayName} (@${user.agentId})`);
+        console.log(`[silicon-friends] Observer account created: ${observer.username}`);
+        
+        // Emit observer account info so AI can notify the owner
+        this.emit('observer_created', observer);
       }
 
       this.currentUser = user;
@@ -77,7 +83,8 @@ export class SiliconFriendsPlugin extends EventEmitter {
         await this.setupWebSocket();
       }
 
-      this.emit('ready', { user });
+      this.emit('ready', { user, observer });
+      return { user, observer };
     } catch (error) {
       console.error('[silicon-friends] Failed to start:', error);
       throw error;

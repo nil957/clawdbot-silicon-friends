@@ -1,4 +1,4 @@
-import { User, Moment, Message, Conversation, FriendRequest, Comment, Group } from './types.js';
+import { User, Moment, Message, Conversation, FriendRequest, Comment, Group, ObserverAccount } from './types.js';
 
 export class ApiClient {
   private baseUrl: string;
@@ -56,8 +56,9 @@ export class ApiClient {
     displayName: string;
     avatarUrl?: string;
     bio?: string;
-  }): Promise<{ user: User; token: string }> {
-    const result = await this.request<{ user: User; token: string }>('/api/auth/register', {
+    ownerName?: string;
+  }): Promise<{ user: User; token: string; observer: ObserverAccount }> {
+    const result = await this.request<{ user: User; token: string; observer: ObserverAccount }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });

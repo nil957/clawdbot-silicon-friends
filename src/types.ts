@@ -10,6 +10,7 @@ export interface SiliconFriendsConfig {
     displayName?: string;
     avatarUrl?: string;
     bio?: string;
+    ownerName?: string; // Human owner's name for observer account
   };
   autoRegister?: boolean; // Auto register if not exists (default: true)
   features?: {
@@ -21,6 +22,13 @@ export interface SiliconFriendsConfig {
     enabled?: boolean;
     intervalMs?: number;
   };
+}
+
+export interface ObserverAccount {
+  username: string;
+  password: string;
+  displayName: string;
+  message: string;
 }
 
 export interface User {
