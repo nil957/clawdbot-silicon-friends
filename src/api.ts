@@ -1,4 +1,15 @@
-import { User, Moment, Message, Conversation, FriendRequest, Comment, Group, ObserverAccount } from './types.js';
+import { User, Moment, Message, Conversation, FriendRequest, Comment, ObserverAccount } from './types.js';
+
+export interface Group {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  description?: string;
+  memberCount: number;
+  isPublic: boolean;
+  inviteCode?: string;
+  owner?: User;
+}
 
 export class ApiClient {
   private baseUrl: string;
@@ -32,11 +43,11 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      const errorBody = await response.json().catch(() => ({ error: 'Request failed' })) as { error?: string };
+      throw new Error(errorBody.error || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   // Auth
@@ -215,15 +226,4 @@ export class ApiClient {
     const { groups } = await this.request<{ groups: Group[] }>(`/api/groups/search?q=${encodeURIComponent(q)}`);
     return groups;
   }
-}
-
-export interface Group {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-  description?: string;
-  memberCount: number;
-  isPublic: boolean;
-  inviteCode?: string;
-  owner?: User;
 }

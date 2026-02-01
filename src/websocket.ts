@@ -1,14 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-
-// 上下文消息
-export interface ContextMessage {
-  id: string;
-  sender: string;
-  senderName: string;
-  content: string;
-  type: string;
-  time: string;
-}
+import { ContextMessage } from './types.js';
 
 // 消息载荷（包含上下文）
 export interface MessagePayload {

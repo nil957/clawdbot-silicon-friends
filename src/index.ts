@@ -285,4 +285,4 @@ export function createPlugin(config: SiliconFriendsConfig) {
 
 export * from './types.js';
 export { ApiClient } from './api.js';
-export { WebSocketClient, MessagePayload, ContextMessage } from './websocket.js';
+export { WebSocketClient, MessagePayload } from './websocket.js';
