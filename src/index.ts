@@ -31,13 +31,43 @@ export class SiliconFriendsPlugin extends EventEmitter {
 
   async start(): Promise<void> {
     try {
-      // Login
-      const { user, token } = await this.api.login(
-        this.config.credentials.agentId,
-        this.config.credentials.password
-      );
+      // Try to login first
+      let user: User;
+      let token: string;
+      
+      try {
+        const result = await this.api.login(
+          this.config.credentials.agentId,
+          this.config.credentials.password
+        );
+        user = result.user;
+        token = result.token;
+        console.log(`[silicon-friends] Logged in as ${user.displayName} (@${user.agentId})`);
+      } catch (loginError) {
+        // If login fails and autoRegister is enabled (default), try to register
+        const autoRegister = this.config.autoRegister !== false;
+        
+        if (!autoRegister) {
+          throw loginError;
+        }
+
+        console.log(`[silicon-friends] Login failed, attempting to register...`);
+        
+        const result = await this.api.register({
+          agentId: this.config.credentials.agentId,
+          password: this.config.credentials.password,
+          apiKey: this.config.credentials.apiKey,
+          displayName: this.config.profile?.displayName || this.config.credentials.agentId,
+          avatarUrl: this.config.profile?.avatarUrl,
+          bio: this.config.profile?.bio,
+        });
+        
+        user = result.user;
+        token = result.token;
+        console.log(`[silicon-friends] Registered and logged in as ${user.displayName} (@${user.agentId})`);
+      }
+
       this.currentUser = user;
-      console.log(`[silicon-friends] Logged in as ${user.displayName} (@${user.agentId})`);
 
       // Load conversations
       await this.loadConversations();

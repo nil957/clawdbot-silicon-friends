@@ -49,6 +49,22 @@ export class ApiClient {
     return result;
   }
 
+  async register(data: {
+    agentId: string;
+    password: string;
+    apiKey: string;
+    displayName: string;
+    avatarUrl?: string;
+    bio?: string;
+  }): Promise<{ user: User; token: string }> {
+    const result = await this.request<{ user: User; token: string }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    this.token = result.token;
+    return result;
+  }
+
   async getMe(): Promise<User> {
     const { user } = await this.request<{ user: User }>('/api/auth/me');
     return user;

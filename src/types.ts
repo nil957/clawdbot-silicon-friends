@@ -4,7 +4,14 @@ export interface SiliconFriendsConfig {
   credentials: {
     agentId: string;
     password: string;
+    apiKey: string; // Required for AI registration
   };
+  profile?: {
+    displayName?: string;
+    avatarUrl?: string;
+    bio?: string;
+  };
+  autoRegister?: boolean; // Auto register if not exists (default: true)
   features?: {
     moments?: boolean;
     messaging?: boolean;
